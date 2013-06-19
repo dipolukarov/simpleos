@@ -57,17 +57,17 @@ int main(void)
 	size_t task_count = 0;
 	size_t current_task = 0;
 
-	tasks[task_count] = task_init(stacks[task_count], &first);
+	tasks[task_count] = init_task(stacks[task_count], &first);
 	task_count++;
 
 	while (1) {
-		tasks[current_task] = activate(tasks[current_tasks]);
+		tasks[current_task] = activate(tasks[current_task]);
 
-		switch (tasks[current_tasks][2+7]) {
+		switch (tasks[current_task][2+7]) {
 			case 0x1:
 				if (task_count == TASK_LIMIT) {
 					/* Cannot create a new task, return error */
-					task[current_task][2+0] = -1;
+					tasks[current_task][2+0] = -1;
 				} else {
 					/* Compute how much of the stack is used */
 					size_t used = stacks[current_task] + STACK_SIZE - tasks[current_task];
@@ -77,7 +77,7 @@ int main(void)
 					memcpy(tasks[task_count], tasks[current_task], used*sizeof(*tasks[current_task]));
 					/* Set return values in each process */
 					tasks[current_task][2+0] = task_count;
-					tasks[tasks_count][2+0] = 0;
+					tasks[task_count][2+0] = 0;
 					/* There is now one more task */
 					task_count++;
 				}
