@@ -27,17 +27,24 @@ void task(void)
 	while (1) syscall();
 }
 
+#define STACK_SIZE	256	/* Size of task stacks in words */
+#define TASK_LIMIT	2	/* Max number of tasks we can handle */
+
+unsigned int *init_task(unsigned int *stack, void (*start)(void))
+{
+	stack += STACK_SIZE - 16;	/* End of stack, minus what we're about to push */
+	stack[0] = 0x10;	/* User mode, interrupts on */
+	stack[1] = (unsigned int)start;
+	return stack;
+}
+
 int main(void)
 {
-	unsigned int stacks[2][256];
-	unsigned int *tasks[2];
-	tasks[0] = stacks[0] + 256 - 16;
-	tasks[0][0] = 0x10;
-	tasks[0][1] = (unsigned int)&first;
+	unsigned int stacks[TASK_LIMIT][STACK_SIZE];
+	unsigned int *tasks[TASK_LIMIT];
 
-	tasks[1] = stacks[1] + 256 - 16;
-	tasks[1][0] = 0x10;
-	tasks[1][1] = (unsigned int)&task;
+	tasks[0] = task_init(stacks[0], &first);
+	tasks[1] = task_init(stacks[1], &task);
 
 	bwputs("Starting!\n");
 	tasks[0] = activate(tasks[0]);
