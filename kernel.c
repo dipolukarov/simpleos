@@ -1,6 +1,7 @@
 /**
  *
  */
+#include <stddef.h>
 #include "versatilepb.h"
 #include "asm.h"
 
@@ -42,16 +43,17 @@ int main(void)
 {
 	unsigned int stacks[TASK_LIMIT][STACK_SIZE];
 	unsigned int *tasks[TASK_LIMIT];
+	size_t task_count = 0;
+	size_t current_task = 0;
 
 	tasks[0] = task_init(stacks[0], &first);
 	tasks[1] = task_init(stacks[1], &task);
 
-	bwputs("Starting!\n");
-	tasks[0] = activate(tasks[0]);
-	bwputs("Heading back to user mode\n");
-	tasks[1] = activate(tasks[1]);
-	bwputs("Done\n");
+	while (1) {
+		tasks[current_task] = activate(tasks[current_tasks]);
+		current_task++;
+		if (current_task >= task_count) current_task = 0;
+	}
 
-	while (1); /* We can't exit, there's nowhere to go */
 	return 0;
 }
