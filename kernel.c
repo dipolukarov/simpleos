@@ -2,6 +2,7 @@
  *
  */
 #include "versatilepb.h"
+#include "asm.h"
 
 void bwputs(char *s)
 {
@@ -17,4 +18,10 @@ int main(void)
 	bwputs("Hello, World!\n");
 
 	return 0;
+}
+
+void first(void)
+{
+	bwputs("In user mode\n");
+	while(1);
 }

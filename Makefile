@@ -4,10 +4,10 @@ LDFLAGS=-N -Ttext=0x10000
 .o.elf:
 	$(LD) $(LDFLAGS) -o $@ $^
 CC=gcc
-CFLAGS=-ansi -pedantic -Wall -Wextra -march=armv6 -msoft-float -fPIC -mapcs-frame
+CFLAGS=-ansi -pedantic -Wall -Wextra -march=armv6 -msoft-float -fPIC -mapcs-frame -marm
 
 .SUFFIXES: .s .o
 .s.o:
 	$(CC) $(CFLAGS) -o $@ -c $^
 
-kernel.elf: bootstrap.o kernel.o
+kernel.elf: bootstrap.o kernel.o context_switch.o
