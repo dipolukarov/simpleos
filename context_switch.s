@@ -6,7 +6,7 @@ svc_entry:
 	mov	r0, sp
 	msr	CPSR_c, #0xD3	/* Supervisor mode */
 
-	msr	ip, SPSR
+	mrs	ip, SPSR
 	stmfd	r0!, {ip,lr}
 
 	/* Load kernel state */

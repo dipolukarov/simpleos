@@ -1,13 +1,20 @@
-LD=ld
-LDFLAGS=-N -Ttext=0x10000
-.SUFFIXES: .o .elf
-.o.elf:
-	$(LD) $(LDFLAGS) -o $@ $^
 CC=gcc
-CFLAGS=-ansi -pedantic -Wall -Wextra -march=armv6 -msoft-float -fPIC -mapcs-frame -marm
+LD=ld
 
-.SUFFIXES: .s .o
+CFLAGS=-ansi -pedantic -Wall -Wextra -march=armv6 -msoft-float -fPIC -mapcs-frame -marm
+LDFLAGS=-N -Ttext=0x10000
+
+kernel.elf: bootstrap.o kernel.o context_switch.o syscall.o
+
+.PHONY: clean
+
+clean:
+	$(RM) *.elf *.o
+
+.SUFFIXES: .s .o .elf
+
 .s.o:
 	$(CC) $(CFLAGS) -o $@ -c $^
 
-kernel.elf: bootstrap.o kernel.o context_switch.o syscall.o
+.o.elf:
+	$(LD) $(LDFLAGS) -o $@ $^
