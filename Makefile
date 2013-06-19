@@ -10,4 +10,4 @@ CFLAGS=-ansi -pedantic -Wall -Wextra -march=armv6 -msoft-float -fPIC -mapcs-fram
 .s.o:
 	$(CC) $(CFLAGS) -o $@ -c $^
 
-kernel.elf: bootstrap.o kernel.o context_switch.o
+kernel.elf: bootstrap.o kernel.o context_switch.o syscall.o
