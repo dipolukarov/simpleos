@@ -50,6 +50,7 @@ void bwputs(char *s)
 #define TASK_READY	0
 #define TASK_WAIT_READ	1
 #define TASK_WAIT_WRITE	2
+#define TASK_WAIT_INTR	3
 
 /**
  * This pathserver assumes that all files are FIFOs that were registered
@@ -310,10 +311,33 @@ int main(void)
 			case 0x4: /* read */
 				_read(tasks[current_task], tasks, task_count, pipes);
 				break;
-			case -4: /* Timer 0 or 1 went off */
-				if (*(TIMER0 + TIMER_MIS)) { /* Timer0 went off */
-					*(TIMER0 + TIMER_INTCLR) = 1; /* Clear interrupt */
-					bwputs("tick\n");
+			case 0x5: /* interrupt_wait */
+				/* Enable interrupt */
+				*(PIC + VIC_INTENABLE) = tasks[current_task][2+0];
+				/* Block task waiting for interrupt to happen */
+				tasks[current_task][-1] = TASK_WAIT_INTR;
+				break;
+			default: /* Catch all interrupts */
+				if ((int)tasks[current_task][2+7] < 0) {
+					unsigned int intr = (1 << -tasks[current_task][2+7]);
+
+					if (intr == PIC_TIMER01) {
+						/* Never disable timer. We need it for preemtion */
+						if (*(TIMER0 + TIMER_MIS)) { /* Timer0 went off */
+							*(TIMER0 + TIMER_INTCLR) = 1; /* Clear inerrupt */
+						}
+					} else {
+						/* Disable interrupt, inerrupt_wait re-enables */
+						*(PIC + VIC_INTENCLEAR) = intr;
+					}
+					/* Unblock any waiting tasks
+					 * XXX: nondeterministic unblock order
+					 */
+					for (i = 0; i < task_count; i++) {
+						if (tasks[i][-1] == TASK_WAIT_INTR && tasks[i][2+0] == intr) {
+							tasks[i][-1] = TASK_READY;
+						}
+					}
 				}
 		}
 
