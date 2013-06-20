@@ -130,16 +130,24 @@ int open(const char *pathname, int flags)
 	return fd;
 }
 
-void otherguy()
+void serialout(volatile unsigned int* uart, unsigned int intr)
 {
-	int fd;
-	unsigned int len;
-	char buf[20];
-	mkfifo("/proc/0", 0);
+	char c;
+	int doread = 1;
+	mkfifo("/dev/tty0/out", 0);
+	fd = open("/dev/tty0/out", 0);
+
+	/* Enable TX interrupt on UART */
+	*(uart + UARTIMSC) |= UARTIMSC_TXIM;
+
 	while (1) {
-		read(fd, &len, 4);
-		read(fd, buf, len);
-		bwputs(buf);
+		if (doread) read(fd, &c, 1);
+		doread = 0;
+		if (!(*(uart + UARTFR) & UARTFR_TXFF)) {
+			*uart = c;
+			doread = 1;
+		}
+		interrupt_wait(intr);
 	}
 }
 
@@ -148,16 +156,12 @@ void first(void)
 	int fd;
 
 	if (!fork()) pathserver();
-	if (!fork()) otherguy();
+	if (!fork()) serialout(UART0, PIC_UART0);
 
-	fd = open("/proc/0", 0);
-	while (1) {
-		int len = sizeof("Ping\n");
-		char buf[sizeof("Ping\n")+4];
-		memcpy(buf, &len, 4);
-		memcpy(buf+4, "Ping\n", len);
-		write(fd, buf, len+4);
-	}
+	fd = open("/dev/tty0/out", 0);
+	write(fd, "woo\n", sizeof("woo\n"));
+	write(fd, "thar\n", sizeof("thar\n"));
+	while(1);
 }
 
 struct pipe_ringbuffer {
@@ -268,7 +272,7 @@ int main(void)
 
 	*(PIC + VIC_INTENABLE) = PIC_TIMER01;
 
-	*TIMER0 = 1000000;
+	*TIMER0 = 10000;
 	*(TIMER0 + TIMER_CONTROL) = TIMER_EN | TIMER_PERIODIC | TIMER_32BIT | TIMER_INTEN;
 
 	tasks[task_count] = init_task(stacks[task_count], &first);
