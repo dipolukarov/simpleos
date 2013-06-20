@@ -69,7 +69,7 @@ int main(void)
 		tasks[current_task] = activate(tasks[current_task]);
 
 		switch (tasks[current_task][2+7]) {
-			case 0x1:
+			case 0x1: /* fork */
 				if (task_count == TASK_LIMIT) {
 					/* Cannot create a new task, return error */
 					tasks[current_task][2+0] = -1;
@@ -86,6 +86,9 @@ int main(void)
 					/* There is now one more task */
 					task_count++;
 				}
+				break;
+			case 0x2: /* getpid */
+				tasks[current_task][2+0] = current_task;
 				break;
 			case -4: /* Timer 0 or 1 went off */
 				if (*(TIMER0 + TIMER_MIS)) { /* Timer0 went off */
