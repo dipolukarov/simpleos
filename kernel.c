@@ -165,22 +165,22 @@ struct pipe_ringbuffer {
 	char data[PIPE_BUF];
 };
 
-#define RB_PUSH(rb, size, v) do { \
+#define RB_PUSH(rb, size, v)	do { \
 		(rb).data[(rb).end] = (v); \
 		(rb).end++; \
 		if ((rb).end > size) (rb).end = 0; \
 	} while (0)
 
-#define RB_POP(rb, size, v) do { \
+#define RB_POP(rb, size, v)	do { \
 		(v) = (rb).data[(rb).start]; \
 		(rb).start++; \
 		if ((rb).start > size) (rb).start = 0; \
 	} while (0)
 
-#define RB_LEN(rb, size) (((rb).end - (rb).start) + (((rb).end < (rb).start) ? size : 0))
+#define RB_LEN(rb, size)	(((rb).end - (rb).start) + (((rb).end < (rb).start) ? size : 0))
 
 #define PIPE_PUSH(pipe, v)	RB_PUSH((pipe), PIPE_BUF, (v))
-#define PIPE_POP(pipe, v)	RB_POP((pipe), PEPE_BUF, (v))
+#define PIPE_POP(pipe, v)	RB_POP((pipe), PIPE_BUF, (v))
 #define PIPE_LEN(pipe)		(RB_LEN((pipe), PIPE_BUF))
 
 unsigned int *init_task(unsigned int *stack, void (*start)(void))
@@ -192,7 +192,7 @@ unsigned int *init_task(unsigned int *stack, void (*start)(void))
 }
 
 void _read(unsigned int *task, unsigned int **tasks, size_t task_count, struct pipe_ringbuffer *pipes);
-void _write(insigned int *task, unsigned int **tasks, size_t task_count, struct pipe_ringbuffer *pipes);
+void _write(unsigned int *task, unsigned int **tasks, size_t task_count, struct pipe_ringbuffer *pipes);
 
 void _read(unsigned int *task, unsigned int **tasks, size_t task_count, struct pipe_ringbuffer *pipes)
 {
@@ -201,25 +201,31 @@ void _read(unsigned int *task, unsigned int **tasks, size_t task_count, struct p
 	if (task[2+0] > PIPE_LIMIT || task[2+2] > PIPE_BUF) {
 		task[2+0] = -1;
 	} else {
-		size_t i;
-		char *buf = (char*)task[2+1];
-		/* Copy data into buf */
-		for (i = 0; i < task[2+2]; i++) {
-			PIPE_POP(*pipe, buf[i]);
-		}
+		struct pipe_ringbuffer *pipe = &pipes[task[2+0]];
+		if ((size_t)PIPE_LEN(*pipe) < task[2+2]) {
+			/* Trying to read more than there is: block */
+			task[-1] = TASK_WAIT_READ;
+		} else {
+			size_t i;
+			char *buf = (char*)task[2+1];
+			/* Copy data into buf */
+			for (i = 0; i < task[2+2]; i++) {
+				PIPE_POP(*pipe, buf[i]);
+			}
 
-		/* Unblock any waiting writes
-		 * XXX: nondeterministic unblock order
-		 */
-		for (i = 0; i < task_count; i++) {
-			if (tasks[i][-1] == TASK_WAITE_WRITE) {
-				_write(tasks[i], tasks, task_count, pipes);
+			/* Unblock any waiting writes
+			 * XXX: nondeterministic unblock order
+		 	*/
+			for (i = 0; i < task_count; i++) {
+				if (tasks[i][-1] == TASK_WAIT_WRITE) {
+					_write(tasks[i], tasks, task_count, pipes);
+				}
 			}
 		}
 	}
 }
 
-void _write(insigned int *task, unsigned int **tasks, size_t task_count, struct pipe_ringbuffer *pipes)
+void _write(unsigned int *task, unsigned int **tasks, size_t task_count, struct pipe_ringbuffer *pipes)
 {
 	/* If fd is invalid or the write would be non-atimic */
 	if (task[2+0] > PIPE_LIMIT || task[2+2] > PIPE_BUF) {
@@ -229,7 +235,7 @@ void _write(insigned int *task, unsigned int **tasks, size_t task_count, struct 
 
 		if ((size_t)PIPE_BUF - PIPE_LEN(*pipe) < task[2+2]) {
 			/* Trying to write more than we have space for: block */
-			task[-1] = TASK_WAITE_WRITE;
+			task[-1] = TASK_WAIT_WRITE;
 		} else {
 			size_t i;
 			const char *buf = (const char*)task[2+1];
@@ -298,7 +304,7 @@ int main(void)
 			case 0x2: /* getpid */
 				tasks[current_task][2+0] = current_task;
 				break;
-			case 0x3; /* write */
+			case 0x3: /* write */
 				_write(tasks[current_task], tasks, task_count, pipes);
 				break;
 			case 0x4: /* read */
