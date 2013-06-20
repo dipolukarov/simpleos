@@ -132,6 +132,7 @@ int open(const char *pathname, int flags)
 
 void serialout(volatile unsigned int* uart, unsigned int intr)
 {
+	int fd;
 	char c;
 	int doread = 1;
 	mkfifo("/dev/tty0/out", 0);
@@ -189,7 +190,7 @@ void first(void)
 {
 	if (!fork()) pathserver();
 	if (!fork()) serialout(UART0, PIC_UART0);
-	if (!firk()) serialin(UART0, PIC_UART0);
+	if (!fork()) serialin(UART0, PIC_UART0);
 	if (!fork()) echo();
 
 	while(1);
